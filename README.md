@@ -2,7 +2,7 @@
 
 **Author**: Daiki Tomojiri & Kosuke Takaya (2023)
 
-**Publication**: _Biological Conservation_ (current status: under submission)
+**Publication**: _Biological Invasions_ (current status: revision following peer-review results)
 
 **Keywords**: invasive alien species, conservation culturomics, twitter, text mining, topic modelling
 
