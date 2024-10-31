@@ -18,7 +18,7 @@ pacman::p_load(tidyverse,
                readxl,
                lubridate,
                hrbrthemes,
-               rstatix,
+               patchwork,
                glue,
                ggtext
 )
@@ -30,12 +30,10 @@ NIS_all <- read_csv("data/NIS-compiled.csv")
 # Color palette
 pal_orig <- pals::cols25(7)[c(5, 4, 7, 2, 1, 6, 3)]
 
-# Temporal trends ---------------------------------------------------------------
+# Levels of taxonomic group
+taxon_arrange <- c("Mammal", "Bird", "Reptile", "Amphibian", "Fish", "Invertebrate", "Plant")
 
-NIS_all$group_biol <- factor(NIS_all$group_biol, 
-                             levels = c("mammal", "bird", "reptile", 
-                                        "amphibian", "fish", 
-                                        "invertebrate", "plant"))
+# Temporal trends ---------------------------------------------------------------
 
 # Check the annual trends of the occurrence
 tweet_finalized %>% 
@@ -46,7 +44,8 @@ tweet_finalized %>%
               dplyr::select(name_sp, group_biol) %>% 
               distinct(),
             by = "name_sp") %>% 
-  mutate(group_biol = str_to_title(group_biol)) %>% 
+  mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange)) %>% 
   ggplot(aes(x = year, y = count)) +
   geom_line(aes(group = name_sp, colour = group_biol), 
             linewidth = 0.5,
@@ -208,27 +207,12 @@ write_csv(NIS_popular, "data/NIS-popular.csv")
 
 # Visualization ---------------------------------------------------------------
 
-NIS_popular$group_biol <- factor(NIS_popular$group_biol, 
-                                 levels = c("mammal", "bird", "reptile", 
-                                            "amphibian", "fish", 
-                                            "invertebrate", "plant"))
-
-# Top NIS
-NIS_top <- NIS_popular %>% 
-  arrange(desc(total)) %>% 
-  group_by(group_biol) %>% 
-  mutate(rank = row_number()) %>% 
-  ungroup() %>% 
-  filter(rank == 1) %>% 
-  transmute(name_sp, name_top = "top")
-
 # Plot bargraph for all species
 NIS_popular %>% 
   arrange(desc(total)) %>% 
   head(50) %>% 
-  left_join(NIS_top, by = "name_sp") %>% 
   mutate(group_biol = str_to_title(group_biol),
-         name_sp = if_else(is.na(name_top), name_sp, str_c(name_sp, "*")),
+         group_biol = factor(group_biol, levels = taxon_arrange),
          name_italic = str_remove_all(name_sp, c(" subspp." = "", " spp." = "")),
          name_block = if_else(str_detect(name_sp, "subspp."), "subsp.",
                               if_else(str_detect(name_sp, "spp."), "spp.", "")),
@@ -236,27 +220,29 @@ NIS_popular %>%
          name_show = glue("<i>{name_italic}</i> {name_block}")) %>% 
   ggplot(aes(x = reorder(name_show, total), y = total)) +
   geom_bar(aes(fill = group_biol), stat = "identity") +
-  scale_fill_manual(values = pal_orig, name = "Biological group") + # cols25かalphabet2のどちらかが良さそう。
+  scale_fill_manual(values = pal_orig, name = "taxonomic group") + # cols25かalphabet2のどちらかが良さそう。
   coord_flip() +
   labs(x = "Species", 
        y = "Frequency of NIS name") +
   theme_ipsum(axis_title_just = "center",
               base_family = "Helvetica",
+              base_size = 8,
               plot_margin = margin(5, 5, 5, 5)) + 
   theme(axis.text.y = element_markdown(hjust = 1, size = 8),
         axis.text.x = element_text(size = 8),
         axis.title = element_text(size = 8),
-        legend.position = "bottom",
+        legend.position = "right",
         legend.box.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
-        legend.key.size = unit(5, 'mm'),
+        legend.text = element_text(size = 8),
+        legend.key.size = unit(4, 'mm'),
         plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm")) +
   labs(x = "")
 
 # Save the visualized result
 ggsave("fig/barplot_top-occurred-ias.png",
-       units = "mm", width = 119, height = 140)
+       units = "mm", width = 119, height = 160)
 ggsave("fig/barplot_top-occurred-ias.eps",
-       units = "mm", width = 119, height = 140, device = cairo_ps)
+       units = "mm", width = 119, height = 160, device = cairo_ps)
 
 # Plot bargraph of occurrence separated by biological groups
 l_biol <- c("mammal", "bird", "reptile", "amphibian", 
@@ -276,8 +262,9 @@ for (i in 1:length(l_biol)) {
     ggplot(aes(x = reorder(name_show, desc(total)), y = total)) +
     geom_bar(aes(fill = group_biol), stat = "identity") +
     scale_fill_manual(values = pal_orig[i]) + # cols25かalphabet2のどちらかが良さそう。
-    labs(x = "Species", 
-         y = "No. of tweets") +
+    labs(x = "", 
+         y = "No. of tweets",
+         subtitle = str_to_title(biol)) +
     theme_ipsum(base_size = 10,
                 axis_title_size = 10,
                 strip_text_size = 10,
@@ -289,9 +276,7 @@ for (i in 1:length(l_biol)) {
           legend.position = "right",
           legend.box.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
           legend.key.size = unit(5, 'mm'),
-          plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm")) +
-    labs(x = "") +
-    labs(subtitle = str_to_title(biol), x = "Species")
+          plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"))
 }
 
 # Layout and save the visualized result

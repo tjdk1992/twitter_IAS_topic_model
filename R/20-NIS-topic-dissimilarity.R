@@ -27,11 +27,14 @@ pacman::p_load(tidyverse,  # for data manipulation
                ggtext
                )
 
+# Data
+NIS_topic <- read_csv("data/NIS-popular-topic.csv")
+
 # Color palette
 pal_orig <- pals::cols25(7)[c(5, 4, 7, 2, 1, 6, 3)]
 
-# Data
-NIS_topic <- read_csv("data/NIS-popular-topic.csv")
+# Levels of taxonomic group
+taxon_arrange <- c("Mammal", "Bird", "Reptile", "Amphibian", "Fish", "Invertebrate", "Plant")
 
 # Topicの類似度(pairwise) -----------------------------------------------------
 
@@ -78,24 +81,25 @@ df_bray_sp %<>%
 # count n in each group
 n_ias_group <- df_bray_pairwise %>% 
   group_by(group_biol) %>% 
-  summarise(n = n()) %>% 
-  mutate(group_biol = str_c(group_biol, "s"),
-         group_biol = str_to_title(group_biol),
-         group_biol = str_replace_all(group_biol, "Fishs", "Fishes"))
-n_ias_group$group_biol <- factor(n_ias_group$group_biol, 
-                                 levels = c("Mammals", "Birds", "Reptiles", 
-                                            "Amphibians", "Fishes", 
-                                            "Invertebrates", "Plants"))
+  summarise(n = n())
+
+label_n_ias_group <- n_ias_group %>% 
+  mutate(group_biol = str_to_title(group_biol),
+                            group_biol = factor(group_biol, levels = taxon_arrange)) %>% 
+  arrange(group_biol) %>% 
+  transmute(n_group_biol = str_c(group_biol, "\n(", n, ")")) %>% 
+  pull()
+
 # Plot
 df_bray_sp %>% 
-  mutate(group_biol = str_c(group_biol)) %>% 
   left_join(n_ias_group, by = "group_biol") %>% 
+  mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange)) %>% 
   ggplot() +
   geom_boxplot(aes(x = group_biol, y = value, fill = group_biol), 
                show.legend = FALSE) +
   # geom_jitter(aes(x = group_biol, y = value), width = 0.3, alpha = 0.3) +
-  scale_x_discrete(labels = pull(transmute(
-    n_ias_group, n_group_biol = str_c(group_biol, "\n(", n, ")")))) +
+  scale_x_discrete(labels = n_ias_group) +
   labs(x = "", 
        y = "Bray-Curtis dissimilarity") +
   scale_fill_manual(values = pal_orig) + # cols25かalphabet2のどちらかが良さそう。
@@ -146,40 +150,66 @@ res_anova <- res_anova %>%
   mutate(comb = str_c(group1, "-", group2)) %>% 
   as_tibble()
 
-pal_orig2 <- c(pals::cols25(7)[c(5, 4, 7, 2, 1)], "black",
-               pals::cols25(7)[3])
-
 vis_tukey <- list()
 l_biol <- c("mammal", "bird", "reptile", "amphibian", 
             "fish", "invertebrate", "plant")
 for (i in 1:length(l_biol)) {
+  # taxonomic group
   biol <- l_biol[i]
-  vis_tukey[[i]] <- res_anova %>% 
+  # df of the taxonomic group
+  target_res_anova <- res_anova %>% 
     filter(group1 == biol) %>% 
     mutate(signif = if_else(p.adj.signif == "ns", "ns", "signif"),
            signif = factor(signif, 
-                           levels = c("signif", "ns"))) %>% 
-    ggplot() +
-    geom_segment(aes(x = conf.low, xend = conf.high, 
-                     y = comb, yend = comb, colour = signif), linewidth = 0.5) +
-    geom_point(aes(x = estimate, y = comb, colour = signif), size = 2) + 
-    scale_colour_manual(values = c(pal_orig2[i], "grey")) +
-    labs(subtitle = str_to_title(biol), x = "Estimate", y = "") +
-    # geom_point(aes(x = conf.low, y = comb), colour = "blue") +
-    # geom_point(aes(x = conf.high, y = comb), colour = "red") +
-    geom_vline(xintercept = 0, linetype="dotted", 
-               color = "black", linewidth = 0.5) +
-    theme_ipsum(base_size = 10,
-                axis_title_size = 10,
-                strip_text_size = 10,
-                axis_text_size = 8,
-                axis_title_just = "center",
-                base_family = "Helvetica",
-                plot_margin = margin(5, 5, 5, 5)) + 
-    theme(legend.position = "right",
-          legend.box.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
-          legend.key.size = unit(5, 'mm'),
-          plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"))
+                           levels = c("signif", "ns")))
+  # check whether there are any significant combination
+  n_signif <- target_res_anova %>% 
+    group_by(signif) %>% 
+    summarise(n = n()) %>% 
+    nrow()
+  # Visualization
+  if (n_signif == 1) {
+    vis_tukey[[i]] <- target_res_anova %>% 
+      ggplot() +
+      geom_segment(aes(x = conf.low, xend = conf.high, 
+                       y = comb, yend = comb), colour = "grey", linewidth = 0.5) +
+      geom_point(aes(x = estimate, y = comb), colour = "grey", size = 2) + 
+      labs(subtitle = str_to_title(biol), x = "Estimate", y = "") +
+      geom_vline(xintercept = 0, linetype="dotted", 
+                 color = "black", linewidth = 0.5) +
+      theme_ipsum(base_size = 10,
+                  axis_title_size = 10,
+                  strip_text_size = 10,
+                  axis_text_size = 8,
+                  axis_title_just = "center",
+                  base_family = "Helvetica",
+                  plot_margin = margin(5, 5, 5, 5)) +
+      theme(legend.position = "right",
+            legend.box.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
+            legend.key.size = unit(5, 'mm'),
+            plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"))
+  } else {
+    vis_tukey[[i]] <- target_res_anova %>% 
+      ggplot() +
+      geom_segment(aes(x = conf.low, xend = conf.high, 
+                       y = comb, yend = comb, colour = signif), linewidth = 0.5) +
+      geom_point(aes(x = estimate, y = comb, colour = signif), size = 2) + 
+      scale_colour_manual(values = c(pal_orig[i], "grey")) +
+      labs(subtitle = str_to_title(biol), x = "Estimate", y = "") +
+      geom_vline(xintercept = 0, linetype="dotted", 
+                 color = "black", linewidth = 0.5) +
+      theme_ipsum(base_size = 10,
+                  axis_title_size = 10,
+                  strip_text_size = 10,
+                  axis_text_size = 8,
+                  axis_title_just = "center",
+                  base_family = "Helvetica",
+                  plot_margin = margin(5, 5, 5, 5)) +
+      theme(legend.position = "right",
+            legend.box.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
+            legend.key.size = unit(5, 'mm'),
+            plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"))
+  }
 }
 
 vis_tukey[[1]] + vis_tukey[[2]] + vis_tukey[[3]] +
@@ -209,8 +239,9 @@ for (i in 1:length(l_biol)) {
     filter(group_biol == biol) %>% 
     ggplot(aes(x = reorder(var1, desc(value)), y = value)) +
     geom_boxplot(aes(fill = group_biol)) +
-    labs(x = "Biological group", 
-         y = "Bray-Curtis dissimilarity") +
+    labs(x = "",
+         y = "Bray-Curtis dissimilarity",
+         subtitle = str_to_title(biol)) +
     scale_fill_manual(values = pal_orig[i]) + # cols25かalphabet2のどちらかが良さそう。
     theme_ipsum(base_size = 10,
                 axis_title_size = 10,

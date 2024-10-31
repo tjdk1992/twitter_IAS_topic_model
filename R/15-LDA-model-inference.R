@@ -19,6 +19,7 @@ pacman::p_load(tidyverse,   # for data manipulation
                magrittr,    # to overwrite data
                tidytext,    # to create document-term matrix
                writexl,      # to write excel sheet
+               hrbrthemes, # for visualization
                readxl,
                xtable
                )
@@ -137,19 +138,47 @@ tmResult <- topicmodels::posterior(topicModel)
 # term-topic distribution
 write_csv(as_tibble(tmResult$terms), "data/LDA-topic-term.csv")
 
-# topic-document distribution (not being use in this study)
-write_csv(as_tibble(tmResult$topics), "data/LDA-doc-topic.csv")
-
-# 1 topic / 1 document distribution (being used in this study) with tweet info
-tweet_finalizing %>% 
-  mutate(topic = topicmodels::topics(topicModel),
-         nam_tp = if_else(topic <= 9, "0", ""),
-         topic = str_c("TP", nam_tp, topic)) %>% 
-  dplyr::select(-nam_tp) %>% 
-  write_csv("data/LDA-doc-topic-tweet.csv")
-
 # Table of terms contained in each topic
 topicModel %>% 
   topicmodels::terms(50) %>% 
   as.data.frame() %>% 
   write_xlsx("data/LDA-topic-top-term.xlsx")
+
+# topic-document distribution (not being use in this study)
+write_csv(as_tibble(tmResult$topics), "data/LDA-doc-topic.csv")
+
+# Assign 1 topic to 1 document
+
+# By using topics function
+# tweet_finalizing %>%
+#   mutate(topic = topicmodels::topics(topicModel),
+#          nam_tp = if_else(topic <= 9, "0", ""),
+#          topic = str_c("TP", nam_tp, topic)) %>%
+#   dplyr::select(-nam_tp) %>%
+#   write_csv("data/LDA-doc-topic-tweet.csv")
+
+# By randomly assign following peer-review comments
+theta <- as.data.frame(tmResult$topics)
+colnames(theta) <- str_c("TP", c(rep("0", 9), rep("", K-9)), colnames(theta))
+
+doc_topic_distrib <- cbind(tweet_finalizing, theta) %>% 
+  pivot_longer(cols = c(TP01:TP25),
+               names_to = "topic",
+               values_to = "prob")
+
+theta_max <- doc_topic_distrib %>% 
+  group_by(id_finalized) %>% 
+  summarise(prob_max = max(prob)) %>% 
+  transmute(doc_prob = str_c(id_finalized, "_", prob_max))
+
+theta_multi <- doc_topic_distrib %>% 
+  mutate(doc_prob = str_c(id_finalized, "_", prob)) %>% 
+  right_join(theta_max, by = "doc_prob") %>% 
+  dplyr::select(-doc_prob)
+  
+# Select topic randomly to assign them to each tweets
+set.seed(123) # seedを1, 2, 3でも試したが結果は同じだった。
+theta_multi %>%
+  group_by(id_finalized) %>% 
+  slice_sample(n = 1) %>% 
+  write_csv("data/LDA-doc-topic-tweet_s123.csv")

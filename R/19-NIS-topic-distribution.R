@@ -26,9 +26,6 @@ pacman::p_load(tidyverse,  # for data manipulation
                ggtext
                )
 
-# Color palette
-pal_orig <- pals::cols25(7)[c(5, 4, 7, 2, 1, 6, 3)]
-
 # Data
 # LDA output
 theta <- read_csv("data/LDA-doc-topic-tweet.csv")
@@ -36,13 +33,13 @@ theta <- read_csv("data/LDA-doc-topic-tweet.csv")
 # Tweets counts
 ias_popular <- read_csv("data/NIS-popular.csv")
 
-# Data preparation ------------------------------------------------------------
+# Color palette
+pal_orig <- pals::cols25(7)[c(5, 4, 7, 2, 1, 6, 3)]
 
-# Order of biological group
-ias_popular$group_biol <- factor(ias_popular$group_biol, 
-                                 levels = c("mammal", "bird", "reptile", 
-                                            "amphibian", "fish", 
-                                            "invertebrate", "plant"))
+# Levels of taxonomic group
+taxon_arrange <- c("Mammal", "Bird", "Reptile", "Amphibian", "Fish", "Invertebrate", "Plant")
+
+# Data preparation ------------------------------------------------------------
 
 # Count of document aligned given topics
 N_doc <- theta %>% 
@@ -73,24 +70,35 @@ NIS_topic %>%
                values_to = "freq") %>% 
   group_by(topic, group_biol) %>% 
   summarise(prob = mean(freq)) %>% 
+  mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange)) %>% 
   ggplot(aes(x = topic, y = prob)) +
-  geom_bar(aes(fill = group_biol), stat = "identity") +
-  scale_fill_manual(values = pal_orig) + 
+  geom_bar(aes(fill = group_biol), stat = "identity", show.legend = FALSE) +
+  scale_fill_manual(values = pal_orig, name = "taxonomic group") + 
   facet_wrap(. ~ group_biol, ncol = 2) +
-  theme_ipsum()
+  labs(x = "", y = "") +
+  theme_ipsum(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        axis.text.y = element_markdown(),
+        plot.margin = margin(0.1, 0.1, 0.1, 0.1, "cm"),
+        panel.spacing=unit(0.5, "lines"))
+
+# Save the visualized result
+ggsave("fig-supp/bar-topic-distrib-taxon.png",
+       units = "mm", width = 150, height = 130)
+ggsave("fig-supp/bar-topic-distrib-taxon.eps",
+       units = "mm", width = 150, height = 130, device = cairo_ps)
 
 # Topic distribution over NISs ------------------------------------------------
 
-# Rename column
-
-NIS_topic <- mutate(NIS_topic, `Biological group` = str_to_title(group_biol))
-
+# Bubble plot
 g_bubble_topic <- NIS_topic %>% 
   arrange(desc(total)) %>% 
   group_by(group_biol) %>% 
   mutate(rank_group = row_number()) %>% 
   ungroup() %>% 
   mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange),
          name_italic = str_remove_all(name_sp, c(" subspp." = "", " spp." = "")),
          name_block = if_else(str_detect(name_sp, "subspp."), "subsp.",
                               if_else(str_detect(name_sp, "spp."), "spp.", "")),
@@ -109,7 +117,7 @@ g_bubble_topic <- NIS_topic %>%
                values_to = "value") %>% 
   ggplot(aes(x = topic, y = reorder(name_show, id_reorder), label = group_biol)) +
   geom_point(aes(size = value, color = group_biol), alpha = 0.7) +
-  scale_color_manual(values = pal_orig[1:5], name = "Biological group") + # cols25かalphabet2のどちらかが良さそう。
+  scale_color_manual(values = pal_orig[1:5], name = "taxonomic group") + # cols25かalphabet2のどちらかが良さそう。
   scale_size(range = c(0.05, 10)) +  # Adjust the range of points size
   scale_x_discrete(position = "top") +
   labs(x = "", y = "") +
@@ -122,13 +130,15 @@ g_bubble_topic <- NIS_topic %>%
 g_bar_rank <- NIS_topic %>% 
   arrange(desc(total)) %>% 
   group_by(group_biol) %>% 
-  mutate(rank_group = row_number()) %>% 
+  mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange),
+         rank_group = row_number()) %>% 
   ungroup() %>% 
-  filter(group_biol == "mammal" | 
-           group_biol == "bird" |
-           group_biol == "reptile"|
-           group_biol == "amphibian"|
-           group_biol == "fish") %>% 
+  filter(group_biol == "Mammal" | 
+           group_biol == "Bird" |
+           group_biol == "Reptile"|
+           group_biol == "Amphibian"|
+           group_biol == "Fish") %>% 
   arrange(total) %>% 
   arrange(desc(group_biol)) %>% 
   mutate(id_reorder = row_number()) %>% 
@@ -173,6 +183,7 @@ g_bubble_topic <- NIS_topic %>%
   mutate(rank_group = row_number()) %>% 
   ungroup() %>% 
   mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange),
          name_italic = str_remove_all(name_sp, c(" subspp." = "", " spp." = "")),
          name_block = if_else(str_detect(name_sp, "subspp."), "subsp.",
                               if_else(str_detect(name_sp, "spp."), "spp.", "")),
@@ -188,7 +199,7 @@ g_bubble_topic <- NIS_topic %>%
                values_to = "value") %>% 
   ggplot(aes(x = topic, y = reorder(name_show, id_reorder), label = group_biol)) +
   geom_point(aes(size = value, color = group_biol), alpha = 0.7) +
-  scale_color_manual(values = pal_orig[6:7], name = "Biological group") + # cols25かalphabet2のどちらかが良さそう。
+  scale_color_manual(values = pal_orig[6:7], name = "taxonomic group") + # cols25かalphabet2のどちらかが良さそう。
   scale_size(range = c(0.05, 10)) +  # Adjust the range of points size
   scale_x_discrete(position = "top") +
   labs(x = "", y = "") +
@@ -201,10 +212,12 @@ g_bubble_topic <- NIS_topic %>%
 g_bar_rank <- NIS_topic %>% 
   arrange(desc(total)) %>% 
   group_by(group_biol) %>% 
-  mutate(rank_group = row_number()) %>% 
+  mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange),
+         rank_group = row_number()) %>% 
   ungroup() %>% 
-  filter(group_biol == "invertebrate" | 
-           group_biol == "plant") %>% 
+  filter(group_biol == "Invertebrate" | 
+           group_biol == "Plant") %>% 
   arrange(total) %>% 
   arrange(desc(group_biol)) %>% 
   mutate(id_reorder = row_number()) %>% 
@@ -251,6 +264,7 @@ NIS_topic %>%
   mutate(rank_group = row_number()) %>% 
   ungroup() %>% 
   mutate(group_biol = str_to_title(group_biol),
+         group_biol = factor(group_biol, levels = taxon_arrange),
          name_italic = str_remove_all(name_sp, c(" subspp." = "", " spp." = "")),
          name_block = if_else(str_detect(name_sp, "subspp."), "subsp.",
                               if_else(str_detect(name_sp, "spp."), "spp.", "")),
@@ -265,7 +279,7 @@ NIS_topic %>%
                values_to = "Frequency") %>% 
   ggplot(aes(x = topic, y = reorder(name_show, id_reorder), label = group_biol)) +
   geom_point(aes(size = Frequency, color = group_biol), alpha = 0.7) +
-  scale_color_manual(values = pal_orig, name = "Biological group") + # cols25かalphabet2のどちらかが良さそう。
+  scale_color_manual(values = pal_orig, name = "taxonomic group") + # cols25かalphabet2のどちらかが良さそう。
   scale_size(range = c(0.05, 10)) +  # Adjust the range of points size
   scale_x_discrete(position = "top") +
   labs(x = "", y = "") +

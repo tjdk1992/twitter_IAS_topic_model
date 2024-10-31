@@ -66,10 +66,10 @@ topic_term %>%
   as.data.frame() %>% 
   mutate(topic = str_c("Topic ", seq(25))) %>% 
   dplyr::select(topic, V1:V5) %>% 
-  write_xlsx("table-manual/table-top5-term-Ja.xlsx")
+  write_xlsx("table/table-top5-term-Ja.xlsx")
 
 # Read translated table
-topic_term_en <- read_excel("table-manual/table-top5-term-En.xlsx")
+topic_term_en <- read_excel("table/table-top5-term-En.xlsx")
 
 # Format final table for manuscript
 table_topic_en <- topic_term_en %>% 

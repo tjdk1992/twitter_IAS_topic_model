@@ -28,6 +28,25 @@ pal_orig <- c(rep(pals::cols25(25), 2))
 beta <- read_csv("data/LDA-topic-term.csv")
 theta <- read_csv("data/LDA-doc-topic-tweet.csv")
 
+theta_raw <- read_csv("data/LDA-doc-topic.csv")
+
+theta_raw %>% 
+  mutate(id = str_c("doc", row_number())) %>% 
+  pivot_longer(cols = -id,
+               names_to = "topic",
+               values_to = "value") %>% 
+  group_by(id) %>% 
+  summarise(max = max(value)) %>% 
+  group_by(id) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+
+test <- data.frame(x = c("", "", "", ""),
+           y = c(0.1, 0.1, 0.04, 0.08))
+
+test %>% 
+  summarise(max = max(y))
+
 # Topic distribution ----------------------------------------------------------
 
 # Check the topic distribution

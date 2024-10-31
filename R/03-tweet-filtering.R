@@ -75,6 +75,9 @@ tweet_filtering %<>%
 # Screen by language
 tweet_filtering %<>% dplyr::select(-lang) # limit to Japanese
 
+# Here is a raw number of tweets for this study
+(n_tweet_original <- nrow(tweet_filtering))
+
 # Screen by the Type
 # Check the type
 table(tweet_filtering$type, useNA = "always")
@@ -84,6 +87,9 @@ tweet_filtering %<>% mutate(type = replace_na(type, "normal"))
 
 # Remove retweeted tweet
 tweet_filtering %<>% filter(type != "retweeted") 
+
+# The number of removed retweets at this step
+(n_tweet_second <- n_tweet_original - nrow(tweet_filtering))
 
 #-----------------------------------------------------------------------------#
 # If there are many identical tweets from a single user account, it is likely 
@@ -107,6 +113,9 @@ tweet_filtering %<>%
   ungroup() %>% 
   filter(id_rm == 1) %>% 
   dplyr::select(-id_rm) 
+
+# The number of removed retweets at this step
+(n_tweet_third <- n_tweet_second - nrow(tweet_filtering))
 
 # Export data
 tweet_filtering %>% 
