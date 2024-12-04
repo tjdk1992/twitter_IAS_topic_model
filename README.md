@@ -1,6 +1,6 @@
 # Aspects of public attention on the most mentioned nonindigenous species, as determined by a comprehensive assessment of Japanese social media
 
-**Author**: Daiki Tomojiri & Kosuke Takaya (2023)
+**Author**: Daiki Tomojiri & Kosuke Takaya (2024)
 
 **Publication**: _Biological Invasions_ (current status: revision following peer-review results)
 
