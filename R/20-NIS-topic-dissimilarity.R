@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------#
-# Script Name: 19-NIS-topic-dissimilarity.R                                   #
+# Script Name: 20-NIS-topic-dissimilarity.R                                   #
 #                                                                             #
 # Author: Daiki Tomojiri                                                      #
 # Email: tomojiri.daiki@gmail.com                                             #
