@@ -47,3 +47,20 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# My Project
+twitter_IAS_topic_model.Rproj
+
+# My Directories
+data/
+data-manual/
+data-proc/
+data-raw/
+fig-manual/
+fig-supp/
+product/
+resource/
+submission/
+submission-log/
+table/
+table-supp/
