@@ -17,6 +17,7 @@ gc(); gc();
 pacman::p_load(tidyverse,
                magrittr,
                wordcloud,
+               hrbrthemes,
                pals,
                readxl,
                writexl)

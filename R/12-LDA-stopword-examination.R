@@ -16,6 +16,7 @@ gc(); gc();
 # Package
 pacman::p_load(tidyverse,
                magrittr,
+               tm,
                readxl,
                tidytext,
                topicmodels)
