@@ -1,8 +1,8 @@
 # Aspects of public attention on the most mentioned nonindigenous species, as determined by a comprehensive assessment of Japanese social media
 
-**Author**: Daiki Tomojiri & Kosuke Takaya (2024)
+**Author**: Daiki Tomojiri & Kosuke Takaya (2025)
 
-**Publication**: _Biological Invasions_ (current status: revision following peer-review results)
+**Publication**: _Biological Invasions_ (current status: [![DOI:10.1007/s10530-024-03520-1](http://img.shields.io/badge/DOI-10.1007/s10530-024-03520-1-00d8ff.svg)](https://doi.org/10.1007/s10530-024-03520-1))
 
 **Keywords**: invasive alien species, conservation culturomics, twitter, text mining, topic modelling
 
